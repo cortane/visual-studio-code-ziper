@@ -50,6 +50,6 @@ export async function unzipCommand(uri: vscode.Uri) {
         zip.extractAllTo(extractPath, true);
         showSuccessMessage(`Successfully extracted to ${extractPath}`);
     } catch (error: any) {
-        showErrorMessage(`Failed to extract ZIP: ${error}`);
+        showErrorMessage(`Failed to extract ZIP: ${error?.message ?? error}`);
     }
 }

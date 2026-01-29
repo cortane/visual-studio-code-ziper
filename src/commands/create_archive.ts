@@ -1,4 +1,4 @@
-const archiver = require('archiver');
+import archiver from 'archiver';
 import * as fs from 'fs';
 
 export function createArchive(outputPath: string) {

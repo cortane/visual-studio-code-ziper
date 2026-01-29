@@ -6,7 +6,6 @@ import { createOneFileZip } from '../commands/onefilezip';
 import { showProgress } from '../commands/progress_display';
 import { showSuccessMessage, showErrorMessage } from '../commands/error_and_message_display';
 import { createArchive } from '../commands/create_archive';
-import * as fs from 'fs';
 
 function assertUri(uri: vscode.Uri | undefined): asserts uri is vscode.Uri {
     if (!uri) {
@@ -30,9 +29,12 @@ async function zipCommand(uri: vscode.Uri) {
     const baseName = isDirectory ? sourceName : path.parse(sourceName).name;
     const zipPath = path.join(dirPath, `${baseName}.zip`);
 
-    if (fs.existsSync(zipPath)) {
+    try {
+        await vscode.workspace.fs.stat(vscode.Uri.file(zipPath));
         showErrorMessage('ZIP file already exists.');
         return;
+    } catch {
+        // ZIP file does not exist, proceed
     }
 
     try {
@@ -63,7 +65,7 @@ async function zipCommand(uri: vscode.Uri) {
             });
         });
     } catch (error: any) {
-        showErrorMessage(`Failed to create ZIP: ${error}`);
+        showErrorMessage(`Failed to create ZIP: ${error?.message ?? error}`);
     }
 }
 
