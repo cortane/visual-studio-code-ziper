@@ -1,5 +1,3 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { unzipCommand } from '../commands/unzip';
 import * as path from 'path';
@@ -8,10 +6,19 @@ import { createOneFileZip } from '../commands/onefilezip';
 import { showProgress } from '../commands/progress_display';
 import { showSuccessMessage, showErrorMessage } from '../commands/error_and_message_display';
 import { createArchive } from '../commands/create_archive';
+import * as fs from 'fs';
+
+function assertUri(uri: vscode.Uri | undefined): asserts uri is vscode.Uri {
+    if (!uri) {
+        throw new Error('No resource selected.');
+    }
+}
 
 async function zipCommand(uri: vscode.Uri) {
-    if (!uri) {
-        showErrorMessage('No resource selected.');
+    try {
+        assertUri(uri);
+    } catch (error: any) {
+        showErrorMessage(error.message);
         return;
     }
 
@@ -22,6 +29,11 @@ async function zipCommand(uri: vscode.Uri) {
     const dirPath = path.dirname(sourcePath);
     const baseName = isDirectory ? sourceName : path.parse(sourceName).name;
     const zipPath = path.join(dirPath, `${baseName}.zip`);
+
+    if (fs.existsSync(zipPath)) {
+        showErrorMessage('ZIP file already exists.');
+        return;
+    }
 
     try {
         await showProgress('Creating ZIP file...', async (progress) => {
@@ -47,7 +59,7 @@ async function zipCommand(uri: vscode.Uri) {
                     createOneFileZip(sourcePath, sourceName, baseName, archive);
                 }
 
-                archive.finalize();
+                archive.finalize().catch(reject);
             });
         });
     } catch (error: any) {

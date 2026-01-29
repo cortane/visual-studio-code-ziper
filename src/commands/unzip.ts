@@ -4,9 +4,17 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { showSuccessMessage, showErrorMessage } from './error_and_message_display';
 
-export async function unzipCommand(uri: vscode.Uri) {
+function assertUri(uri: vscode.Uri | undefined): asserts uri is vscode.Uri {
     if (!uri) {
-        showErrorMessage('No ZIP file selected.');
+        throw new Error('No ZIP file selected.');
+    }
+}
+
+export async function unzipCommand(uri: vscode.Uri) {
+    try {
+        assertUri(uri);
+    } catch (error: any) {
+        showErrorMessage(error.message);
         return;
     }
 

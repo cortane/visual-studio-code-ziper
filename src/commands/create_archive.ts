@@ -7,6 +7,8 @@ export function createArchive(outputPath: string) {
         zlib: { level: 9 }
     });
 
+    archive.on('error', (err: any) => output.destroy(err));
+
     archive.pipe(output);
     return { archive, output };
 }
