@@ -1,7 +1,7 @@
 import * as archiver from 'archiver';
-import * as fs from 'fs';
 import * as path from 'path';
 
-export function createFolderZip(sourcePath: string, sourceName: string, archive: archiver.Archiver) {
+export function createFolderZip(sourcePath: string, archive: archiver.Archiver) {
+    const sourceName = path.basename(sourcePath);
     archive.directory(sourcePath, sourceName);
 }

@@ -2,13 +2,12 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { unzipCommand } from '../commands/unzip';
-const archiver = require('archiver');
-import * as fs from 'fs';
 import * as path from 'path';
 import { createFolderZip } from '../commands/folderzip';
 import { createOneFileZip } from '../commands/onefilezip';
 import { showProgress } from '../commands/progress_display';
 import { showSuccessMessage, showErrorMessage } from '../commands/error_and_message_display';
+import { createArchive } from '../commands/create_archive';
 
 async function zipCommand(uri: vscode.Uri) {
     if (!uri) {
@@ -27,10 +26,7 @@ async function zipCommand(uri: vscode.Uri) {
     try {
         await showProgress('Creating ZIP file...', async (progress) => {
             return new Promise<void>((resolve, reject) => {
-                const output = fs.createWriteStream(zipPath);
-                const archive = archiver('zip', {
-                    zlib: { level: 9 }
-                });
+                const { archive, output } = createArchive(zipPath);
 
                 output.on('close', () => {
                     showSuccessMessage(`Successfully created ${zipPath}`);
@@ -45,10 +41,8 @@ async function zipCommand(uri: vscode.Uri) {
                     progress.report({ message: `${progressData.entries.processed} files processed` });
                 });
 
-                archive.pipe(output);
-
                 if (isDirectory) {
-                    createFolderZip(sourcePath, sourceName, archive);
+                    createFolderZip(sourcePath, archive);
                 } else {
                     createOneFileZip(sourcePath, sourceName, baseName, archive);
                 }
