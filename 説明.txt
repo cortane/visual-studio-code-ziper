@@ -1,0 +1,78 @@
+# Visual Studio Code Ziper プロジェクト説明
+
+## 初心者向けの簡単な説明
+
+このプロジェクトは、Visual Studio Code（VS Code）というプログラミングエディタに追加できる拡張機能（プラグイン）です。名前は「Ziper」で、ファイルをZIP形式で圧縮したり、ZIPファイルを解凍したりする機能を追加します。
+
+### どんなことができるの？
+- **フォルダーやファイルをZIPに圧縮**: エクスプローラー（VS Codeの左側のファイル一覧）でフォルダーやファイルを右クリックして「ZIP」を選ぶだけで、簡単にZIPファイルを作れます。
+- **ZIPファイルを解凍**: ZIPファイルを右クリックして「Unzip」を選ぶと、自動的に解凍されます。
+- **安全で便利**: 進捗状況を表示したり、セキュリティ対策をしたりしていて、初心者でも安心して使えます。
+
+### 使い方の例
+- フォルダー「myfolder」を右クリック → 「ZIP」 → 「myfolder.zip」が作られます。
+- 「archive.zip」を右クリック → 「Unzip」 → 「archive」フォルダーが作られます。
+
+この拡張機能があれば、ファイルをまとめて送ったり、バックアップしたりするのがとても簡単になります。プログラミングを始めたばかりの人でも、すぐに使えるように作られています。
+
+## 開発者向けの詳細な説明
+
+### プロジェクトの概要
+このプロジェクトは、TypeScriptで書かれたVS Code拡張機能で、ファイルのZIP圧縮・解凍機能をエクスプローラーのコンテキストメニューに追加します。バージョン0.0.1の初期リリースとして、基本的な機能を実装しています。
+
+### 使用技術とフレームワーク
+- **プログラミング言語**: TypeScript
+  - 型安全性を確保し、JavaScriptのスーパーセットとして使用。
+- **ビルドツール**: ESBuild
+  - 高速なバンドラーで、拡張機能をコンパイル・バンドル。
+  - `config/esbuild.js`で設定。
+- **リンター**: ESLint
+  - コード品質を維持するための静的解析ツール。
+  - `config/eslint.config.mjs`で設定。
+- **テストフレームワーク**: VS Code Extension Test Runner
+  - 拡張機能のテストを実行。
+- **パッケージマネージャー**: npm
+  - 依存関係管理とスクリプト実行。
+- **VS Code API**: @types/vscode
+  - VS Code拡張機能開発のためのAPI。
+
+### プロジェクト構造
+```
+src/
+├── commands/
+│   ├── create_archive.ts      # ZIP作成機能の実装
+│   ├── error_and_message_display.ts  # エラー表示とメッセージ処理
+│   ├── folderzip.ts           # フォルダーZIP機能
+│   ├── onefilezip.ts          # 単一ファイルZIP機能
+│   ├── progress_display.ts    # 進捗表示機能
+│   └── unzip.ts               # 解凍機能
+└── Extension_Registration/
+    └── extension.ts           # 拡張機能のメインエントリーポイント
+config/
+├── package.json               # 拡張機能のマニフェストと依存関係
+├── tsconfig.json              # TypeScript設定
+├── esbuild.js                 # ESBuild設定
+└── eslint.config.mjs          # ESLint設定
+docs/
+├── README.md                  # ユーザー向けドキュメント
+├── CHANGELOG.md               # 変更履歴
+└── vsc-extension-quickstart.md # VS Code拡張機能開発ガイド
+```
+
+### ビルドと開発プロセス
+- **コンパイル**: `npm run compile` でTypeScriptチェック、リント、ESBuild実行。
+- **ウォッチモード**: `npm run watch` でファイル変更時に自動ビルド。
+- **テスト**: `npm test` でテスト実行。
+- **パッケージング**: `npm run package` で.vsixファイル生成。
+
+### 主要な機能の実装
+- **コマンド登録**: `package.json`の`contributes.commands`でZIP/Unzipコマンド定義。
+- **メニュー統合**: `contributes.menus`でエクスプローラーコンテキストメニューに追加。
+- **セキュリティ**: Zip Slip攻撃対策を実装。
+- **進捗表示**: VS CodeのProgress APIを使用。
+
+### 要件
+- VS Code 1.108.1以上
+- Node.js（開発時のみ）
+
+このプロジェクトは、VS Code拡張機能開発のベストプラクティスに従っており、オープンソースとして貢献を歓迎します。
