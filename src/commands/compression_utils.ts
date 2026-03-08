@@ -38,24 +38,38 @@ export function shouldStore(fileName: string): boolean {
 
 /**
  * 作成した ZIP ファイルの整合性を検証する。
- * 中央ディレクトリの読み取り + 先頭の非空エントリの CRC32 検証を行う。
+ * CRC32 ストリーム検証を行う。
  */
 export async function verifyZipIntegrity(zipPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         yauzl.open(zipPath, { lazyEntries: true }, (err: Error | null, zipfile: any) => {
             if (err) return reject(err);
 
-            let foundEntry = false;
+            let pending = 0;
+            let seenAny = false;
+            let ended = false;
+
+            function tryFinish() {
+                if (ended && pending === 0) {
+                    zipfile.close();
+                    if (!seenAny) {
+                        return reject(new Error('ZIP archive verification failed: no entries found'));
+                    }
+                    return resolve();
+                }
+            }
 
             zipfile.readEntry();
+
             zipfile.on('entry', (entry: any) => {
-                // スキップするディレクトリエントリ
+                // ディレクトリエントリはスキップ
                 if (/\/$/.test(entry.fileName)) {
                     zipfile.readEntry();
                     return;
                 }
 
-                foundEntry = true;
+                seenAny = true;
+                pending++;
 
                 zipfile.openReadStream(entry, (streamErr: Error | null, readStream: any) => {
                     if (streamErr) {
@@ -64,32 +78,44 @@ export async function verifyZipIntegrity(zipPath: string): Promise<void> {
                     }
 
                     let byteCount = 0;
+                    let crc = 0xffffffff >>> 0;
+
                     readStream.on('data', (chunk: Buffer) => {
                         byteCount += chunk.length;
+                        crc = crc32Update(crc, chunk);
                     });
 
                     readStream.on('end', () => {
-                        // エントリの非圧縮サイズと読み取ったバイト数を比較
+                        // finalize CRC
+                        const computed = (crc ^ 0xffffffff) >>> 0;
+
+                        // Compare sizes if available
                         if (typeof entry.uncompressedSize === 'number' && byteCount !== entry.uncompressedSize) {
                             zipfile.close();
                             return reject(new Error(`ZIP archive verification failed: size mismatch for ${entry.fileName}`));
                         }
-                        zipfile.close();
-                        return resolve();
+
+                        // Compare CRC32 if available in central directory
+                        if (typeof entry.crc32 === 'number' && (computed >>> 0) !== (entry.crc32 >>> 0)) {
+                            zipfile.close();
+                            return reject(new Error(`ZIP archive verification failed: CRC32 mismatch for ${entry.fileName}`));
+                        }
+
+                        pending--;
+                        zipfile.readEntry();
+                        tryFinish();
                     });
 
-                    readStream.on('error', (streamErr2: Error) => {
+                    readStream.on('error', (readErr: Error) => {
                         zipfile.close();
-                        return reject(streamErr2);
+                        return reject(readErr);
                     });
                 });
             });
 
             zipfile.on('end', () => {
-                if (!foundEntry) {
-                    zipfile.close();
-                    return reject(new Error('ZIP archive verification failed: no entries found'));
-                }
+                ended = true;
+                tryFinish();
             });
 
             zipfile.on('error', (zipErr: Error) => {
