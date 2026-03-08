@@ -82,7 +82,6 @@ VS Code のエクスプローラーのコンテキストメニューから手軽
 
 ### v0.0.1
 - 初期リリース
-
 ---
 
 Visual Studio Code Ziper — Copyright (c) 2026
