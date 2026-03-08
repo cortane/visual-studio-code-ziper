@@ -6,18 +6,14 @@ import { createOneFileZip } from '../commands/onefilezip';
 import { showProgress } from '../commands/progress_display';
 import { showSuccessMessage, showErrorMessage } from '../commands/error_and_message_display';
 import { createArchive } from '../commands/create_archive';
-
-function assertUri(uri: vscode.Uri | undefined): asserts uri is vscode.Uri {
-    if (!uri) {
-        throw new Error('No resource selected.');
-    }
-}
+import { assertUri } from '../commands/assert_uri';
+import { verifyZipIntegrity } from '../commands/compression_utils';
 
 async function zipCommand(uri: vscode.Uri) {
     try {
         assertUri(uri);
-    } catch (error: any) {
-        showErrorMessage(error.message);
+    } catch (error: unknown) {
+        showErrorMessage(error instanceof Error ? error.message : String(error));
         return;
     }
 
@@ -39,53 +35,51 @@ async function zipCommand(uri: vscode.Uri) {
 
     try {
         await showProgress('Creating ZIP file...', async (progress) => {
-            return new Promise<void>((resolve, reject) => {
-                const { archive, output } = createArchive(zipPath);
+            const { archive, output } = createArchive(zipPath);
 
-                output.on('close', () => {
-                    showSuccessMessage(`Successfully created ${zipPath}`);
-                    resolve();
-                });
-
-                archive.on('error', (err: any) => {
+            // ストリーム完了を待つ Promise
+            const closePromise = new Promise<void>((resolve, reject) => {
+                output.on('close', resolve);
+                output.on('error', reject);
+                archive.on('error', (err: Error) => {
+                    output.destroy();
                     reject(err);
                 });
-
-                archive.on('progress', (progressData: any) => {
-                    progress.report({ message: `${progressData.entries.processed} files processed` });
-                });
-
-                if (isDirectory) {
-                    createFolderZip(sourcePath, archive);
-                } else {
-                    createOneFileZip(sourcePath, sourceName, baseName, archive);
-                }
-
-                archive.finalize().catch(reject);
             });
+
+            archive.on('progress', (progressData: { entries: { processed: number; total: number }; fs: { processedBytes: number; totalBytes: number } }) => {
+                progress.report({ message: `${progressData.entries.processed} files processed` });
+            });
+
+            if (isDirectory) {
+                await createFolderZip(sourcePath, archive);
+            } else {
+                createOneFileZip(sourcePath, sourceName, baseName, archive);
+            }
+
+            await archive.finalize();
+            await closePromise;
+
+            // ZIP 整合性チェック
+            progress.report({ message: 'Verifying...' });
+            verifyZipIntegrity(zipPath);
         });
-    } catch (error: any) {
-        showErrorMessage(`Failed to create ZIP: ${error?.message ?? error}`);
+
+        showSuccessMessage(`Successfully created ${zipPath}`);
+    } catch (error: unknown) {
+        try {
+            await vscode.workspace.fs.delete(vscode.Uri.file(zipPath));
+        } catch {
+            // Ignore cleanup errors
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        showErrorMessage(`Failed to create ZIP: ${message}`);
     }
 }
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+    const zipDisposable = vscode.commands.registerCommand('zipExplorer.zip', zipCommand);
+    const unzipDisposable = vscode.commands.registerCommand('zipExplorer.unzip', unzipCommand);
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "visual-studio-code-ziper" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const zipDisposable = vscode.commands.registerCommand('zipExplorer.zip', zipCommand);
-	const unzipDisposable = vscode.commands.registerCommand('zipExplorer.unzip', unzipCommand);
-
-	context.subscriptions.push(zipDisposable);
-	context.subscriptions.push(unzipDisposable);
+    context.subscriptions.push(zipDisposable, unzipDisposable);
 }
-
-// This method is called when your extension is deactivated
-export function deactivate() {}

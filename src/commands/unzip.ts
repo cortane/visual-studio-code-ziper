@@ -1,20 +1,16 @@
 import * as vscode from 'vscode';
-const AdmZip = require('adm-zip');
+import AdmZip from 'adm-zip';
 import * as path from 'path';
 import * as fs from 'fs';
 import { showSuccessMessage, showErrorMessage } from './error_and_message_display';
-
-function assertUri(uri: vscode.Uri | undefined): asserts uri is vscode.Uri {
-    if (!uri) {
-        throw new Error('No ZIP file selected.');
-    }
-}
+import { showProgress } from './progress_display';
+import { assertUri } from './assert_uri';
 
 export async function unzipCommand(uri: vscode.Uri) {
     try {
-        assertUri(uri);
-    } catch (error: any) {
-        showErrorMessage(error.message);
+        assertUri(uri, 'No ZIP file selected.');
+    } catch (error: unknown) {
+        showErrorMessage(error instanceof Error ? error.message : String(error));
         return;
     }
 
@@ -23,7 +19,6 @@ export async function unzipCommand(uri: vscode.Uri) {
     const zipName = path.basename(zipPath, '.zip');
     const extractPath = path.join(dirPath, zipName);
 
-    // Check if extract path already exists
     if (fs.existsSync(extractPath)) {
         const choice = await vscode.window.showWarningMessage(
             `Folder "${zipName}" already exists. Overwrite?`,
@@ -36,20 +31,33 @@ export async function unzipCommand(uri: vscode.Uri) {
     }
 
     try {
-        const zip = new AdmZip(zipPath);
+        await showProgress('Extracting ZIP file...', async (progress) => {
+            const zip = new AdmZip(zipPath);
+            const normalizedExtractPath = path.resolve(extractPath);
+            const entries = zip.getEntries();
 
-        // Zip Slip protection
-        const entries = zip.getEntries();
-        for (const entry of entries) {
-            const resolvedPath = path.resolve(extractPath, entry.entryName);
-            if (!resolvedPath.startsWith(extractPath + path.sep)) {
-                throw new Error('Invalid ZIP entry detected: potential Zip Slip attack');
+            // Zip Slip 保護: 全エントリのパスを事前検証
+            for (const entry of entries) {
+                const resolvedPath = path.resolve(extractPath, entry.entryName);
+                if (resolvedPath !== normalizedExtractPath && !resolvedPath.startsWith(normalizedExtractPath + path.sep)) {
+                    throw new Error('Invalid ZIP entry detected: potential Zip Slip attack');
+                }
             }
-        }
 
-        zip.extractAllTo(extractPath, true);
+            // エントリごとに展開し進捗を報告
+            const totalEntries = entries.length;
+            let processed = 0;
+
+            for (const entry of entries) {
+                zip.extractEntryTo(entry, extractPath, true, true);
+                processed++;
+                progress.report({ message: `${processed}/${totalEntries} entries` });
+            }
+        });
+
         showSuccessMessage(`Successfully extracted to ${extractPath}`);
-    } catch (error: any) {
-        showErrorMessage(`Failed to extract ZIP: ${error?.message ?? error}`);
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        showErrorMessage(`Failed to extract ZIP: ${message}`);
     }
 }

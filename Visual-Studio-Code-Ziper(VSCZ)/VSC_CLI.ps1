@@ -11,7 +11,7 @@ Write-Host ""
 
 # VSIX file (same directory as script)
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$VsixPath  = Join-Path $ScriptDir "visual-studio-code-ziper-0.0.1.vsix"
+$VsixPath  = Join-Path $ScriptDir "visual-studio-code-ziper-0.0.2.vsix"
 
 # VSIX existence check
 if (-not (Test-Path $VsixPath)) {

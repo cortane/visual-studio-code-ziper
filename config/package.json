@@ -2,8 +2,9 @@
   "name": "visual-studio-code-ziper",
   "displayName": "Visual-Studio-Code_Ziper",
   "description": "Add ZIP compression to explorer context menu",
-  "icon": "icon.png",
-  "version": "0.0.1",
+  "icon": "assets/icon.png",
+  "readme": "docs/README.md",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.108.1"
   },
@@ -41,12 +42,12 @@
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "vsce package --allow-missing-repository",
+    "package": "cd .. && copy config\\package.json . /Y >nul && copy config\\.vscodeignore . /Y >nul && (echo y| vsce package --allow-missing-repository --no-dependencies) & node build/inject-readme.js & del package.json & del .vscodeignore",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "cd .. && eslint --config config/eslint.config.mjs src",
     "test": "vscode-test"
   },
   "devDependencies": {

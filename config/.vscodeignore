@@ -1,14 +1,22 @@
+# Development
 .vscode/**
 .vscode-test/**
-out/**
-node_modules/**
 src/**
-.gitignore
-.yarnrc
-esbuild.js
-vsc-extension-quickstart.md
+config/**
+node_modules/**
+build/**
+out/**
+Visual-Studio-Code-Ziper(VSCZ)/**
+
+# Source & config files
+**/*.ts
+**/*.map
 **/tsconfig.json
 **/eslint.config.mjs
-**/*.map
-**/*.ts
-**/.vscode-test.*
+**/esbuild.js
+
+# Misc
+*.vsix
+.gitignore
+.yarnrc
+.git/**
