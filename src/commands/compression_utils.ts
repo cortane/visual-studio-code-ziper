@@ -3,6 +3,31 @@ import type { EntryData } from 'archiver';
 import AdmZip from 'adm-zip';
 const yauzl = require('yauzl');
 
+// CRC32 テーブルを生成
+const CRC32_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let j = 0; j < 8; j++) {
+            if (c & 1) {
+                c = 0xEDB88320 ^ (c >>> 1);
+            } else {
+                c = c >>> 1;
+            }
+        }
+        table[i] = c >>> 0;
+    }
+    return table;
+})();
+
+function crc32Update(crc: number, buf: Buffer) {
+    let c = crc >>> 0;
+    for (let i = 0; i < buf.length; i++) {
+        c = (CRC32_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8)) >>> 0;
+    }
+    return c >>> 0;
+}
+
 /** archiver の EntryData に ZIP 固有の store オプションを追加 */
 export interface ZipEntryData extends EntryData {
     store?: boolean;
@@ -43,7 +68,7 @@ export function shouldStore(fileName: string): boolean {
 export async function verifyZipIntegrity(zipPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         yauzl.open(zipPath, { lazyEntries: true }, (err: Error | null, zipfile: any) => {
-            if (err) return reject(err);
+            if (err) { return reject(err); }
 
             let pending = 0;
             let seenAny = false;
