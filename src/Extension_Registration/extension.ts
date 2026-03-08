@@ -60,9 +60,9 @@ async function zipCommand(uri: vscode.Uri) {
             await archive.finalize();
             await closePromise;
 
-            // ZIP 整合性チェック
+            // ZIP 整合性チェック（非同期ストリーム検証）
             progress.report({ message: 'Verifying...' });
-            verifyZipIntegrity(zipPath);
+            await verifyZipIntegrity(zipPath);
         });
 
         showSuccessMessage(`Successfully created ${zipPath}`);

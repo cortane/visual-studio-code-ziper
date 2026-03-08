@@ -67,6 +67,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
-    "archiver": "^7.0.1"
+    "archiver": "^7.0.1",
+    "yauzl": "^2.10.0"
   }
 }
